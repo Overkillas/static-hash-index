@@ -1,0 +1,17 @@
+[project]
+name = "projeto-indice-hash"
+version = "1.0.0"
+description = "Simulação de índice hash estático sobre ~466k palavras em inglês — UNIFOR"
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = [
+    "PyQt6>=6.6.0",
+]
+
+[dependency-groups]
+dev = [
+    "pytest>=8.0.0",
+]
+
+[project.scripts]
+hash-index = "main:main"
