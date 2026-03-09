@@ -128,7 +128,6 @@ class LoadPanel(QWidget):
         file_layout.addWidget(self.file_label, stretch=1)
 
         browse_btn = QPushButton("Selecionar Arquivo...")
-        browse_btn.setToolTip("Selecionar o arquivo words_alpha.txt")
         browse_btn.clicked.connect(self._browse_file)
         file_layout.addWidget(browse_btn)
 
@@ -144,12 +143,6 @@ class LoadPanel(QWidget):
         self.page_size_spin.setRange(1, 10_000)
         self.page_size_spin.setValue(100)   # padrão recomendado
         self.page_size_spin.setSuffix(" registros/página")
-        self.page_size_spin.setToolTip(
-            "Número máximo de palavras por página.\n"
-            "Padrão: 100  →  ~4.660 páginas para 466k palavras.\n"
-            "Valores menores = mais páginas = mais I/Os no table scan.\n"
-            "Valores maiores = menos páginas = mais palavras por página."
-        )
         config_layout.addWidget(self.page_size_spin)
         config_layout.addStretch()
 
@@ -158,7 +151,6 @@ class LoadPanel(QWidget):
         # ── Botão de carga ────────────────────────────────────────────
         self.load_btn = QPushButton("Carregar e Paginar")
         self.load_btn.setEnabled(False)
-        self.load_btn.setToolTip("Lê o arquivo e distribui as palavras em páginas")
         self.load_btn.clicked.connect(self._start_load)
         layout.addWidget(self.load_btn)
 

@@ -151,25 +151,21 @@ class SearchPanel(QWidget):
 
         self.search_input = QLineEdit()
         self.search_input.setPlaceholderText("Digite uma palavra em inglês... (ex: apple)")
-        self.search_input.setToolTip("A busca é case-insensitive (convertida para minúsculas)")
         self.search_input.returnPressed.connect(self._do_both)
         search_layout.addWidget(self.search_input, stretch=1)
 
         self.idx_btn = QPushButton("Buscar por Indice")
         self.idx_btn.setEnabled(False)
-        self.idx_btn.setToolTip("Usa o índice hash: O(1) médio")
         self.idx_btn.clicked.connect(self._do_index_search)
         search_layout.addWidget(self.idx_btn)
 
         self.scan_btn = QPushButton("Table Scan")
         self.scan_btn.setEnabled(False)
-        self.scan_btn.setToolTip("Varredura sequencial: O(N) no pior caso")
         self.scan_btn.clicked.connect(self._do_scan)
         search_layout.addWidget(self.scan_btn)
 
         self.both_btn = QPushButton("Buscar Ambos")
         self.both_btn.setEnabled(False)
-        self.both_btn.setToolTip("Executa índice + scan e exibe o comparativo")
         self.both_btn.clicked.connect(self._do_both)
         search_layout.addWidget(self.both_btn)
 
@@ -377,12 +373,19 @@ class SearchPanel(QWidget):
         entry, bucket_reads, idx_time = self._last_idx_result
         page_id, pages_read, scan_time = self._last_scan_result
 
-        idx_cost = bucket_reads + 1   # buckets lidos + 1 página de dados
+        # Se a chave foi encontrada, soma +1 pela leitura da página de dados.
+        # Se não foi encontrada, o custo é apenas os buckets lidos.
+        idx_cost = bucket_reads + 1 if entry is not None else bucket_reads
 
-        # Calcula o speedup do índice em relação ao scan
+        # Calcula o speedup e a diferença percentual entre as buscas
         if idx_time > 0 and scan_time > 0:
             speedup = scan_time / idx_time
-            speedup_str = f"Indice foi {speedup:.1f}x mais rapido que o Table Scan."
+            time_diff_pct = ((scan_time - idx_time) / scan_time) * 100
+            speedup_str = (
+                f"Indice foi {speedup:.1f}x mais rapido que o Table Scan.\n"
+                f"Diferenca percentual de tempo: {time_diff_pct:.2f}%\n"
+                f"Diferenca de custo (I/Os): {pages_read} (scan) vs {idx_cost} (indice)"
+            )
         else:
             speedup_str = "(tempo muito pequeno para calcular speedup)"
 

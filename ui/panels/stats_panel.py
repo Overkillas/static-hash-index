@@ -49,18 +49,14 @@ class MetricCard(QWidget):
     Args:
         title:       Título da métrica (exibido em negrito no topo).
         bar_color:   Cor da barra de progresso (formato CSS, ex: "#FF5722").
-        tooltip:     Texto de tooltip explicativo.
     """
 
     def __init__(
         self,
         title: str,
         bar_color: str = "#2196F3",
-        tooltip: str = "",
     ) -> None:
         super().__init__()
-        if tooltip:
-            self.setToolTip(tooltip)
 
         layout = QVBoxLayout(self)
         layout.setContentsMargins(12, 12, 12, 12)
@@ -161,19 +157,11 @@ class StatsPanel(QWidget):
         self.collision_card = MetricCard(
             title="Taxa de Colisao (%)",
             bar_color="#EF5350",
-            tooltip=(
-                "Taxa de Colisao = (total_colisoes / NR) × 100\n"
-                "Colisao: inserção que encontrou o bucket primário cheio."
-            ),
         )
 
         self.overflow_card = MetricCard(
             title="Taxa de Overflow (%)",
             bar_color="#AB47BC",
-            tooltip=(
-                "Taxa de Overflow = (buckets_overflow / NB) × 100\n"
-                "Overflow: novo bucket encadeado criado quando o primário está cheio."
-            ),
         )
 
         cards_layout.addWidget(self.collision_card)
@@ -200,6 +188,12 @@ class StatsPanel(QWidget):
 
         self.overflow_abs_label = QLabel("—")
         details_form.addRow("Buckets de Overflow Criados:", self.overflow_abs_label)
+
+        self.total_buckets_label = QLabel("—")
+        details_form.addRow("Total de Buckets (primarios + overflow):", self.total_buckets_label)
+
+        self.underused_buckets_label = QLabel("—")
+        details_form.addRow("Buckets com ate 80% do FR:", self.underused_buckets_label)
 
         self.build_time_label = QLabel("—")
         details_form.addRow("Tempo de Construcao:", self.build_time_label)
@@ -272,4 +266,17 @@ class StatsPanel(QWidget):
         self.overflow_abs_label.setText(
             f"{overflow_count:,}  ({overflow_rate:.4f}% dos buckets primarios)"
         )
+
+        # Total de buckets = primários + overflow
+        total_buckets = nb + overflow_count
+        self.total_buckets_label.setText(f"{total_buckets:,}  ({nb:,} + {overflow_count:,})")
+
+        # Conta buckets primários com até 80% do FR preenchido
+        threshold = fr * 0.8
+        underused = sum(1 for b in index.buckets if len(b.entries) <= threshold)
+        underused_pct = (underused / nb * 100) if nb > 0 else 0.0
+        self.underused_buckets_label.setText(
+            f"{underused} de {nb}  ({underused_pct:.2f}%)"
+        )
+
         self.build_time_label.setText(f"{build_time:.4f} segundos")

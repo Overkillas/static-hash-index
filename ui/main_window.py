@@ -80,8 +80,7 @@ class MainWindow(QMainWindow):
 
         # ── Cabeçalho informativo ─────────────────────────────────────
         header = QLabel(
-            "<b>Indice Hash Estatico</b> — "
-            "Simulacao de indexacao sobre ~466k palavras em ingles"
+            "<b>Indice Hash</b>"
         )
         header.setAlignment(Qt.AlignmentFlag.AlignCenter)
         header.setStyleSheet(

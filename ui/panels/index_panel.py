@@ -26,6 +26,8 @@ puro. Usar QThread mantém a interface responsiva durante todo esse processo.
 
 from __future__ import annotations
 
+import math
+
 from PyQt6.QtCore import QThread, pyqtSignal
 from PyQt6.QtWidgets import (
     QFormLayout,
@@ -117,18 +119,11 @@ class IndexPanel(QWidget):
         self.fr_spin.setRange(1, 10_000)
         self.fr_spin.setValue(10)   # padrão: 10 entradas/bucket
         self.fr_spin.setSuffix(" entradas/bucket")
-        self.fr_spin.setToolTip(
-            "FR = Fator de Recarga: capacidade máxima de cada bucket primário.\n"
-            "FR menor → mais buckets → menos colisões → mais memória.\n"
-            "FR maior → menos buckets → mais colisões → menos memória.\n"
-            "Padrão recomendado: 10."
-        )
         self.fr_spin.valueChanged.connect(self._update_nb_display)
         params_form.addRow("FR — Fator de Recarga:", self.fr_spin)
 
         # NB — exibido automaticamente (somente leitura)
         self.nb_label = QLabel("—")
-        self.nb_label.setToolTip("NB = ⌈NR / FR⌉ + 1  (calculado automaticamente)")
         params_form.addRow("NB — Número de Buckets:", self.nb_label)
 
         # NR — informativo
@@ -147,9 +142,6 @@ class IndexPanel(QWidget):
         # ── Botão de construção ───────────────────────────────────────
         self.build_btn = QPushButton("Construir Índice Hash")
         self.build_btn.setEnabled(False)
-        self.build_btn.setToolTip(
-            "Percorre todas as páginas e insere cada palavra em seu bucket"
-        )
         self.build_btn.clicked.connect(self._start_build)
         layout.addWidget(self.build_btn)
 
@@ -165,19 +157,12 @@ class IndexPanel(QWidget):
         results_form = QFormLayout(results_group)
 
         self.time_label = QLabel("—")
-        self.time_label.setToolTip("Medido com time.perf_counter() (alta resolução)")
         results_form.addRow("Tempo de Construção:", self.time_label)
 
         self.collision_label = QLabel("—")
-        self.collision_label.setToolTip(
-            "Contabilizada quando a inserção encontra o bucket PRIMÁRIO cheio"
-        )
         results_form.addRow("Total de Colisões:", self.collision_label)
 
         self.overflow_label = QLabel("—")
-        self.overflow_label.setToolTip(
-            "Cada vez que um novo bucket de overflow é criado"
-        )
         results_form.addRow("Buckets de Overflow Criados:", self.overflow_label)
 
         layout.addWidget(results_group)
@@ -211,8 +196,9 @@ class IndexPanel(QWidget):
             return
         fr = self.fr_spin.value()
         nb = calculate_nb(self._nr, fr)
+        raw = math.ceil(self._nr / fr)
         self.nb_label.setText(
-            f"{nb:,} buckets  [= ⌈{self._nr:,} / {fr}⌉ + 1]"
+            f"{nb} buckets  [= ceil({self._nr} / {fr}) + 1 = {raw} + 1]"
         )
 
     def _start_build(self) -> None:
