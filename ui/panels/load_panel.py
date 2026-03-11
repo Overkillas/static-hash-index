@@ -140,7 +140,7 @@ class LoadPanel(QWidget):
         config_layout.addWidget(QLabel("Tamanho da Página (PAGE_SIZE):"))
 
         self.page_size_spin = QSpinBox()
-        self.page_size_spin.setRange(1, 10_000)
+        self.page_size_spin.setRange(1, 1_000_000)
         self.page_size_spin.setValue(100)   # padrão recomendado
         self.page_size_spin.setSuffix(" registros/página")
         config_layout.addWidget(self.page_size_spin)

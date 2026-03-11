@@ -116,7 +116,7 @@ class IndexPanel(QWidget):
 
         # FR — Fator de Recarga
         self.fr_spin = QSpinBox()
-        self.fr_spin.setRange(1, 10_000)
+        self.fr_spin.setRange(1, 1_000_000)
         self.fr_spin.setValue(10)   # padrão: 10 entradas/bucket
         self.fr_spin.setSuffix(" entradas/bucket")
         self.fr_spin.valueChanged.connect(self._update_nb_display)
