@@ -1,27 +1,3 @@
-"""
-Módulo: ui/panels/stats_panel.py
-==================================
-Painel de estatísticas — Aba 4 da interface.
-
-Responsabilidades (HU12, HU13):
-  - HU12: Exibir a taxa de colisão (%) com barra visual.
-  - HU13: Exibir a taxa de overflow (%) com barra visual.
-
-Métricas exibidas:
-  ┌─────────────────────────────────────────────────────────────────┐
-  │  Taxa de Colisão  (%)  =  (colisões / NR) × 100                │
-  │  Taxa de Overflow (%)  =  (overflows / NB) × 100               │
-  │  NR = total de registros inseridos no índice                    │
-  │  NB = número de buckets primários                               │
-  │  FR = fator de recarga (entradas por bucket)                    │
-  │  Tempo de construção do índice                                  │
-  └─────────────────────────────────────────────────────────────────┘
-
-Quando é atualizado:
-  - Após a construção do índice (IndexPanel emite `index_built`).
-  - A janela principal chama `set_index()` com os dados do índice.
-"""
-
 from __future__ import annotations
 
 from PyQt6.QtCore import Qt
@@ -38,18 +14,7 @@ from PyQt6.QtWidgets import (
 from core.hash_index import HashIndex
 
 
-# ---------------------------------------------------------------------------
-# Widget auxiliar: Card de métrica com barra de progresso
-# ---------------------------------------------------------------------------
-
 class MetricCard(QWidget):
-    """
-    Card visual que exibe um título, um valor percentual e uma barra de progresso.
-
-    Args:
-        title:       Título da métrica (exibido em negrito no topo).
-        bar_color:   Cor da barra de progresso (formato CSS, ex: "#FF5722").
-    """
 
     def __init__(
         self,
@@ -62,26 +27,22 @@ class MetricCard(QWidget):
         layout.setContentsMargins(12, 12, 12, 12)
         layout.setSpacing(8)
 
-        # Título
         title_lbl = QLabel(f"<b>{title}</b>")
         title_lbl.setAlignment(Qt.AlignmentFlag.AlignCenter)
         layout.addWidget(title_lbl)
 
-        # Valor numérico (grande)
         self.value_label = QLabel("—")
         self.value_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         self.value_label.setStyleSheet("font-size: 28px; font-weight: bold;")
         layout.addWidget(self.value_label)
 
-        # Sub-label com contagem absoluta
         self.sub_label = QLabel("")
         self.sub_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         self.sub_label.setStyleSheet("color: #555; font-size: 11px;")
         layout.addWidget(self.sub_label)
 
-        # Barra de progresso visual
         self.bar = QProgressBar()
-        self.bar.setRange(0, 1000)   # escala x10 para suportar frações
+        self.bar.setRange(0, 1000)
         self.bar.setValue(0)
         self.bar.setTextVisible(False)
         self.bar.setFixedHeight(18)
@@ -100,7 +61,6 @@ class MetricCard(QWidget):
         )
         layout.addWidget(self.bar)
 
-        # Estilo do card
         self.setStyleSheet(
             """
             MetricCard {
@@ -113,44 +73,22 @@ class MetricCard(QWidget):
         self.setMinimumWidth(200)
 
     def set_value(self, percent: float, sub_text: str = "") -> None:
-        """
-        Atualiza o valor exibido no card.
-
-        Args:
-            percent:  Valor percentual (0.0 a 100.0).
-            sub_text: Texto opcional abaixo do valor (ex: "1234 colisões").
-        """
         self.value_label.setText(f"{percent:.2f}%")
         self.sub_label.setText(sub_text)
-        # Escala para 0-1000 para preservar 1 casa decimal na barra
         bar_val = int(min(percent * 10, 1000))
         self.bar.setValue(bar_val)
 
 
-# ---------------------------------------------------------------------------
-# Painel principal
-# ---------------------------------------------------------------------------
-
 class StatsPanel(QWidget):
-    """
-    Painel de estatísticas do índice hash — Aba 4.
-
-    Exibe as métricas calculadas após a construção do índice.
-    """
 
     def __init__(self) -> None:
         super().__init__()
         self._setup_ui()
 
-    # ------------------------------------------------------------------
-    # Construção da UI
-    # ------------------------------------------------------------------
-
     def _setup_ui(self) -> None:
         layout = QVBoxLayout(self)
         layout.setSpacing(14)
 
-        # ── Cards de taxa (parte superior) ───────────────────────────
         cards_layout = QHBoxLayout()
         cards_layout.setSpacing(14)
 
@@ -168,7 +106,6 @@ class StatsPanel(QWidget):
         cards_layout.addWidget(self.overflow_card)
         layout.addLayout(cards_layout)
 
-        # ── Detalhes do índice ────────────────────────────────────────
         details_group = QGroupBox("Detalhes do Indice Construido")
         details_form = QFormLayout(details_group)
         details_form.setLabelAlignment(Qt.AlignmentFlag.AlignRight)
@@ -200,7 +137,6 @@ class StatsPanel(QWidget):
 
         layout.addWidget(details_group)
 
-        # ── Fórmulas de referência ────────────────────────────────────
         formulas_group = QGroupBox("Formulas de Calculo")
         formulas_layout = QVBoxLayout(formulas_group)
 
@@ -219,34 +155,15 @@ class StatsPanel(QWidget):
         layout.addWidget(formulas_group)
         layout.addStretch()
 
-    # ------------------------------------------------------------------
-    # Interface pública (chamada pela MainWindow)
-    # ------------------------------------------------------------------
-
     def set_index(self, index: HashIndex, nr: int, build_time: float) -> None:
-        """
-        Atualiza todas as métricas com os dados do índice recém-construído.
-
-        Args:
-            index:      O HashIndex construído pelo IndexPanel.
-            nr:         Número total de registros inseridos no índice.
-            build_time: Tempo de construção em segundos (float).
-        """
         nb = index.nb
         fr = index.fr
         collision_count = index.collision_count
         overflow_count = index.overflow_count
 
-        # ── Cálculo das taxas ─────────────────────────────────────────
-        # Taxa de colisão: proporção de inserções que encontraram o bucket
-        # primário cheio em relação ao total de registros.
         collision_rate = (collision_count / nr * 100) if nr > 0 else 0.0
-
-        # Taxa de overflow: proporção de buckets de overflow criados em
-        # relação ao número de buckets primários.
         overflow_rate = (overflow_count / nb * 100) if nb > 0 else 0.0
 
-        # ── Atualiza os cards ─────────────────────────────────────────
         self.collision_card.set_value(
             collision_rate,
             sub_text=f"{collision_count:,} colisoes de {nr:,} inserções",
@@ -256,7 +173,6 @@ class StatsPanel(QWidget):
             sub_text=f"{overflow_count:,} buckets de {nb:,} primarios",
         )
 
-        # ── Atualiza os labels de detalhes ────────────────────────────
         self.nr_label.setText(f"{nr:,} registros")
         self.nb_label.setText(f"{nb:,} buckets")
         self.fr_label.setText(f"{fr} entradas/bucket")
@@ -267,11 +183,9 @@ class StatsPanel(QWidget):
             f"{overflow_count:,}  ({overflow_rate:.4f}% dos buckets primarios)"
         )
 
-        # Total de buckets = primários + overflow
         total_buckets = nb + overflow_count
         self.total_buckets_label.setText(f"{total_buckets:,}  ({nb:,} + {overflow_count:,})")
 
-        # Conta buckets primários com até 80% do FR preenchido
         threshold = fr * 0.8
         underused = sum(1 for b in index.buckets if len(b.entries) <= threshold)
         underused_pct = (underused / nb * 100) if nb > 0 else 0.0

@@ -1,34 +1,3 @@
-"""
-Módulo: ui/panels/search_panel.py
-===================================
-Painel de busca e comparação — Aba 3 da interface.
-
-Responsabilidades (HU09, HU10, HU11, HU14):
-  - HU09: Busca por índice → mostra bucket acessado, página encontrada e custo.
-  - HU10: Table scan → mostra páginas lidas e custo.
-  - HU11: Comparar tempo e custo índice vs table scan.
-  - HU14: Destacar visualmente o bucket e a página acessados.
-
-Fluxo de uso:
-  1. Usuário digita uma palavra no campo de busca.
-  2. Clica em "Buscar por Índice", "Table Scan" ou "Buscar Ambos".
-  3. Os resultados aparecem nos painéis laterais com destaque colorido.
-  4. A tabela de comparação mostra custo e tempo lado a lado.
-
-Custo de I/O:
-  - Busca por índice: N leituras de bucket + 1 leitura de página
-    (N = tamanho da cadeia de overflow percorrida, geralmente N=1)
-  - Table scan: K leituras de página até encontrar a chave
-    (K = posição da palavra na sequência de páginas)
-
-Destaque visual (HU14):
-  - Bucket acessado: fundo laranja escuro + texto branco
-  - Página encontrada (índice): fundo verde escuro + texto branco
-  - Página encontrada (scan): fundo azul marinho + texto branco
-  - Não encontrado: fundo vermelho escuro + texto branco
-  - Inativo: fundo cinza claro + texto cinza escuro
-"""
-
 from __future__ import annotations
 
 from PyQt6.QtCore import Qt
@@ -50,32 +19,13 @@ from core.page import Page
 from core.table_scan import table_scan as do_table_scan
 
 
-# ---------------------------------------------------------------------------
-# Widget auxiliar: Label com destaque colorido
-# ---------------------------------------------------------------------------
-
 class HighlightLabel(QLabel):
-    """
-    QLabel com fundo colorido para destacar resultados de busca.
 
-    Cada estado usa um par (fundo, texto, borda) com contraste garantido.
-    Nunca deixamos o Qt escolher a cor do texto — isso evitava o branco
-    sobre amarelo claro que tornava a leitura impossível.
-
-    Estados:
-    - BUCKET: fundo âmbar escuro + texto branco (bucket acessado)
-    - INDEX:  fundo verde escuro + texto branco (página via índice)
-    - SCAN:   fundo azul escuro  + texto branco (página via scan)
-    - ERROR:  fundo vermelho     + texto branco (não encontrado)
-    - OFF:    fundo cinza claro  + texto cinza escuro (inativo)
-    """
-
-    # Tuplas (bg, text_color, border_color) — contraste WCAG AA garantido
-    STYLE_BUCKET = ("#E65100", "#FFFFFF", "#BF360C")   # laranja escuro / branco
-    STYLE_INDEX  = ("#1B5E20", "#FFFFFF", "#004D00")   # verde floresta / branco
-    STYLE_SCAN   = ("#0D47A1", "#FFFFFF", "#002171")   # azul marinho   / branco
-    STYLE_ERROR  = ("#B71C1C", "#FFFFFF", "#7F0000")   # vermelho escuro / branco
-    STYLE_OFF    = ("#EEEEEE", "#424242", "#BDBDBD")   # cinza claro / cinza escuro
+    STYLE_BUCKET = ("#E65100", "#FFFFFF", "#BF360C")
+    STYLE_INDEX  = ("#1B5E20", "#FFFFFF", "#004D00")
+    STYLE_SCAN   = ("#0D47A1", "#FFFFFF", "#002171")
+    STYLE_ERROR  = ("#B71C1C", "#FFFFFF", "#7F0000")
+    STYLE_OFF    = ("#EEEEEE", "#424242", "#BDBDBD")
 
     def __init__(self, text: str = "", active_style: tuple = STYLE_BUCKET) -> None:
         super().__init__(text)
@@ -84,22 +34,18 @@ class HighlightLabel(QLabel):
         self._apply_style(*self.STYLE_OFF)
 
     def activate(self, text: str) -> None:
-        """Ativa o destaque colorido e exibe o texto."""
         self.setText(text)
         self._apply_style(*self._active_style)
 
     def deactivate(self, text: str = "—") -> None:
-        """Volta ao estado inativo (cinza neutro)."""
         self.setText(text)
         self._apply_style(*self.STYLE_OFF)
 
     def set_error(self, text: str) -> None:
-        """Destaque vermelho para indicar 'não encontrado'."""
         self.setText(text)
         self._apply_style(*self.STYLE_ERROR)
 
     def _apply_style(self, bg: str, fg: str, border: str) -> None:
-        """Aplica fundo, cor de texto e borda explicitamente."""
         self.setStyleSheet(
             f"""
             QLabel {{
@@ -115,37 +61,20 @@ class HighlightLabel(QLabel):
         )
 
 
-# ---------------------------------------------------------------------------
-# Painel principal
-# ---------------------------------------------------------------------------
-
 class SearchPanel(QWidget):
-    """
-    Painel de busca e comparação — Aba 3.
-
-    Não emite sinais — todos os resultados são exibidos internamente.
-    """
 
     def __init__(self) -> None:
         super().__init__()
         self._pages: list[Page] = []
         self._index: HashIndex | None = None
-
-        # Armazena os últimos resultados para o comparativo
-        self._last_idx_result: tuple | None = None   # (entry, bucket_reads, elapsed)
-        self._last_scan_result: tuple | None = None  # (page_id, pages_read, elapsed)
-
+        self._last_idx_result: tuple | None = None
+        self._last_scan_result: tuple | None = None
         self._setup_ui()
-
-    # ------------------------------------------------------------------
-    # Construção da UI
-    # ------------------------------------------------------------------
 
     def _setup_ui(self) -> None:
         layout = QVBoxLayout(self)
         layout.setSpacing(10)
 
-        # ── Campo de busca e botões ───────────────────────────────────
         search_group = QGroupBox("Palavra a Buscar")
         search_layout = QHBoxLayout(search_group)
 
@@ -171,10 +100,8 @@ class SearchPanel(QWidget):
 
         layout.addWidget(search_group)
 
-        # ── Resultados lado a lado ────────────────────────────────────
         results_layout = QHBoxLayout()
 
-        # Resultado — Busca por Índice
         idx_group = QGroupBox("Busca por Indice (Hash)")
         idx_form = QFormLayout(idx_group)
         idx_form.setLabelAlignment(Qt.AlignmentFlag.AlignRight)
@@ -204,7 +131,6 @@ class SearchPanel(QWidget):
 
         results_layout.addWidget(idx_group)
 
-        # Resultado — Table Scan
         scan_group = QGroupBox("Table Scan (Varredura Sequencial)")
         scan_form = QFormLayout(scan_group)
         scan_form.setLabelAlignment(Qt.AlignmentFlag.AlignRight)
@@ -226,7 +152,6 @@ class SearchPanel(QWidget):
         results_layout.addWidget(scan_group)
         layout.addLayout(results_layout)
 
-        # ── Tabela de comparação ──────────────────────────────────────
         cmp_group = QGroupBox("Comparativo: Indice vs Table Scan")
         cmp_layout = QVBoxLayout(cmp_group)
 
@@ -242,32 +167,15 @@ class SearchPanel(QWidget):
         layout.addWidget(cmp_group)
         layout.addStretch()
 
-    # ------------------------------------------------------------------
-    # Interface pública (chamada pela MainWindow)
-    # ------------------------------------------------------------------
-
     def set_data(self, pages: list[Page], index: HashIndex) -> None:
-        """
-        Recebe as páginas e o índice construído, e habilita os botões.
-
-        Args:
-            pages: Lista de páginas para o table scan.
-            index: O índice hash para a busca direta.
-        """
         self._pages = pages
         self._index = index
         self.idx_btn.setEnabled(True)
         self.scan_btn.setEnabled(True)
         self.both_btn.setEnabled(True)
-        # Limpa resultados anteriores (caso o índice tenha sido reconstruído)
         self._clear_results()
 
-    # ------------------------------------------------------------------
-    # Handlers de busca
-    # ------------------------------------------------------------------
-
     def _do_index_search(self) -> None:
-        """Executa a busca usando o índice hash e atualiza os widgets."""
         if self._index is None:
             return
 
@@ -277,7 +185,6 @@ class SearchPanel(QWidget):
 
         entry, bucket_reads, elapsed = search_index(self._index, key)
 
-        # Calcula o bucket primário que seria acessado
         primary_id = hash_function(key, self._index.nb)
         primary_bucket = self._index.buckets[primary_id]
 
@@ -287,22 +194,17 @@ class SearchPanel(QWidget):
             )
             self.idx_status_label.setStyleSheet("color: #2E7D32; font-weight: bold;")
 
-            # Destaque amarelo no bucket
             self.idx_bucket_hl.activate(
                 f"Bucket #{primary_id}  ({bucket_reads} leitura(s))"
             )
 
-            # Mostra cadeia de overflow textualmente
             chain_str = primary_bucket.get_chain_summary()
-            # Limita a exibição para não ocupar muito espaço
             if len(chain_str) > 120:
                 chain_str = chain_str[:120] + "..."
             self.idx_chain_label.setText(chain_str)
 
-            # Destaque verde na página
             self.idx_page_hl.activate(f"Pagina #{entry.page_id}")
 
-            # Custo total = leituras de bucket + 1 leitura de página
             total_cost = bucket_reads + 1
             self.idx_cost_label.setText(
                 f"{total_cost} I/O(s)  [{bucket_reads} bucket(s) + 1 pagina]"
@@ -324,7 +226,6 @@ class SearchPanel(QWidget):
         self._try_update_comparison()
 
     def _do_scan(self) -> None:
-        """Executa o table scan sequencial e atualiza os widgets."""
         if not self._pages:
             return
 
@@ -337,7 +238,6 @@ class SearchPanel(QWidget):
         if page_id is not None:
             self.scan_status_label.setText(f'Encontrada: "{key}"')
             self.scan_status_label.setStyleSheet("color: #2E7D32; font-weight: bold;")
-            # Destaque azul na página
             self.scan_page_hl.activate(f"Pagina #{page_id}")
         else:
             self.scan_status_label.setText(f'Nao encontrada: "{key}"')
@@ -354,30 +254,21 @@ class SearchPanel(QWidget):
         self._try_update_comparison()
 
     def _do_both(self) -> None:
-        """Executa índice e scan em sequência, depois exibe o comparativo."""
         key = self.search_input.text().strip().lower()
         if not key:
             return
         self._do_index_search()
         self._do_scan()
 
-    # ------------------------------------------------------------------
-    # Comparativo
-    # ------------------------------------------------------------------
-
     def _try_update_comparison(self) -> None:
-        """Atualiza a tabela comparativa se ambos os resultados existem."""
         if self._last_idx_result is None or self._last_scan_result is None:
             return
 
         entry, bucket_reads, idx_time = self._last_idx_result
         page_id, pages_read, scan_time = self._last_scan_result
 
-        # Se a chave foi encontrada, soma +1 pela leitura da página de dados.
-        # Se não foi encontrada, o custo é apenas os buckets lidos.
         idx_cost = bucket_reads + 1 if entry is not None else bucket_reads
 
-        # Calcula o speedup e a diferença percentual entre as buscas
         if idx_time > 0 and scan_time > 0:
             speedup = scan_time / idx_time
             time_diff_pct = ((scan_time - idx_time) / scan_time) * 100
@@ -417,12 +308,7 @@ class SearchPanel(QWidget):
         )
         self.comparison_text.setPlainText(text)
 
-    # ------------------------------------------------------------------
-    # Helpers
-    # ------------------------------------------------------------------
-
     def _clear_results(self) -> None:
-        """Limpa todos os resultados exibidos."""
         self.idx_status_label.setText("—")
         self.idx_status_label.setStyleSheet("")
         self.idx_bucket_hl.deactivate()
